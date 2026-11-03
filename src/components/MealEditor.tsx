@@ -18,8 +18,8 @@ export default function MealEditor({initial,onClose,onSave}:{initial?:Meal,onClo
  function apply(p:ParseResult,raw:string){
    const explicit=parseLocal(raw);
    const val=(field:'kcal'|'protein'|'carbs'|'fat'|'fiber')=>explicit[field]??p[field];
-   setMeal(m=>({...m,name:p.name||m.name,kcal:val('kcal'),protein:val('protein'),carbs:val('carbs'),fat:val('fat'),fiber:val('fiber'),source:[explicit.kcal,explicit.protein,explicit.carbs,explicit.fat].some(v=>v!==null)?'label':p.source,
-     consumedAt:raw.match(/(?:o\s+|godzin(?:ie|a)\s+)[0-2]?\d[:.][0-5]\d|\bwczoraj\b/i)?explicit.consumedAt:m.consumedAt,
+   setMeal((m):Meal=>({...m,name:p.name||m.name,kcal:val('kcal'),protein:val('protein'),carbs:val('carbs'),fat:val('fat'),fiber:val('fiber'),source:[explicit.kcal,explicit.protein,explicit.carbs,explicit.fat].some(v=>v!==null)?'label':p.source,
+     consumedAt:raw.match(/(?:o\s+|godzin(?:ie|a)\s+)[0-2]?\d[:.][0-5]\d|\bwczoraj\b/i)?(explicit.consumedAt ?? m.consumedAt):m.consumedAt,
      components:p.components?.map(c=>({...c,id:crypto.randomUUID()}))||[],rawText:raw}));
  }
  async function parse(withAI:boolean){
