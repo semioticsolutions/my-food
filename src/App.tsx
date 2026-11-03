@@ -28,8 +28,11 @@ export default function App(){
  const [day,setDay]=useState(today());const [editor,setEditor]=useState<{open:boolean,meal?:Meal}>({open:false});
  const [loaded,setLoaded]=useState(false);const [session,setSession]=useState<Session|null>(null);
  const [email,setEmail]=useState(()=>localStorage.getItem('my-food-login-email')||'');const [accountMessage,setAccountMessage]=useState('');
- const [otpSent,setOtpSent]=useState(()=>localStorage.getItem('my-food-otp-pending')==='1');
- const [otpCode,setOtpCode]=useState('');const [aiModel,setAiModel]=useState<AiModelId>(getPreferredAiModel);
+ const [password,setPassword]=useState('');
+ const [newPassword,setNewPassword]=useState('');
+ const [confirmPassword,setConfirmPassword]=useState('');
+ const [authBusy,setAuthBusy]=useState(false);
+ const [aiModel,setAiModel]=useState<AiModelId>(getPreferredAiModel);
  const [syncing,setSyncing]=useState(false);const [syncMessage,setSyncMessage]=useState('');
  const [lastSyncAt,setLastSyncAt]=useState<string|null>(null);
  const [healthCloud,setHealthCloud]=useState(false);const [showDemo,setShowDemo]=useState(false);
@@ -37,7 +40,13 @@ export default function App(){
  const refresh=useCallback(async()=>{setAllMeals(await getMeals());setMeasurements(await getMeasures());},[]);
  useEffect(()=>{void refresh().then(()=>setLoaded(true));if(!supabase)return;
   supabase.auth.getSession().then(({data})=>setSession(data.session));
-  const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,s)=>setSession(s));
+  const {data:{subscription}}=supabase.auth.onAuthStateChange((event,s)=>{
+   setSession(s);
+   if(event==='PASSWORD_RECOVERY'){
+    setPage('settings');
+    setAccountMessage('Link odzyskiwania został otwarty. Ustaw nowe hasło poniżej, bez tworzenia nowego konta.');
+   }
+  });
   return ()=>subscription.unsubscribe();
  },[refresh]);
  useEffect(()=>{setLastSyncAt(session?localStorage.getItem(`my-food-last-sync-${session.user.id}`):null);},[session?.user.id]);
@@ -56,19 +65,47 @@ export default function App(){
  async function remove(m:Meal){if(!confirm(`Usunąć posiłek „${m.name}”?`))return;await putMeal({...m,deletedAt:new Date().toISOString(),updatedAt:new Date().toISOString()});await refresh();setToast('Posiłek usunięty.');if(session)void synchronize(false);}
  async function demo(){await clearDemo();for(const m of seedMeals())await putMeal(m);await refresh();setShowDemo(true);setToast('Dodano przykładowe posiłki.');}
  async function clearSamples(){await clearDemo();await refresh();setShowDemo(false);setToast('Usunięto przykładowe posiłki.');}
- async function login(e:React.FormEvent){e.preventDefault();if(!supabase)return;setAccountMessage('');
-  const normalized=email.trim().toLowerCase();setEmail(normalized);
-  const {error}=await supabase.auth.signInWithOtp({email:normalized,options:{emailRedirectTo:`${window.location.origin}${window.location.pathname}`}});
-  if(error){setAccountMessage(`Błąd: ${error.message}`);return;}
-  localStorage.setItem('my-food-login-email',normalized);
-  localStorage.setItem('my-food-otp-pending','1');setOtpSent(true);setOtpCode('');
-  setAccountMessage('Wysłano 6-cyfrowy kod e-mail. Wpisz go poniżej, bez otwierania linku.');
+ async function login(e:React.FormEvent){
+  e.preventDefault();if(!supabase||authBusy)return;
+  const normalized=email.trim().toLowerCase();
+  setAccountMessage('');setAuthBusy(true);
+  try{
+   const {error}=await supabase.auth.signInWithPassword({email:normalized,password});
+   if(error)throw error;
+   setEmail(normalized);setPassword('');
+   localStorage.setItem('my-food-login-email',normalized);
+   localStorage.removeItem('my-food-otp-pending');
+   setAccountMessage('Zalogowano. Sesja jest zapamiętywana w tej instalacji aplikacji.');
+  }catch(e){setAccountMessage(`Błąd logowania: ${e instanceof Error?e.message:String(e)}. Jeśli jeszcze nie masz hasła, ustaw je na Macu z zalogowanej sesji.`);}
+  finally{setAuthBusy(false);}
  }
- async function verifyCode(e:React.FormEvent){e.preventDefault();if(!supabase)return;setAccountMessage('');
-  const {error}=await supabase.auth.verifyOtp({email:email.trim().toLowerCase(),token:otpCode.trim(),type:'email'});
-  if(error){setAccountMessage(`Błąd weryfikacji: ${error.message}`);return;}
-  setOtpSent(false);setOtpCode('');localStorage.removeItem('my-food-otp-pending');
-  setAccountMessage('Zalogowano. Sesja zostanie zapamiętana w tej aplikacji.');
+ async function setAccountPassword(e:React.FormEvent){
+  e.preventDefault();if(!supabase||!session||authBusy)return;
+  setAccountMessage('');
+  if(newPassword.length<12){setAccountMessage('Hasło powinno mieć co najmniej 12 znaków.');return;}
+  if(newPassword!==confirmPassword){setAccountMessage('Nowe hasła nie są identyczne.');return;}
+  setAuthBusy(true);
+  try{
+   const {error}=await supabase.auth.updateUser({password:newPassword});
+   if(error)throw error;
+   setNewPassword('');setConfirmPassword('');
+   setAccountMessage('Hasło zostało ustawione dla ISTNIEJĄCEGO konta. Możesz teraz zalogować się nim na iPhonie.');
+  }catch(e){setAccountMessage(`Nie udało się ustawić hasła: ${e instanceof Error?e.message:String(e)}. W razie wymogu ponownej autoryzacji skorzystaj z linku resetowania hasła.`);}
+  finally{setAuthBusy(false);}
+ }
+ async function requestPasswordReset(){
+  if(!supabase||authBusy)return;
+  const normalized=email.trim().toLowerCase();
+  if(!normalized){setAccountMessage('Wpisz najpierw adres e-mail obecnego konta.');return;}
+  setAccountMessage('');setAuthBusy(true);
+  try{
+   const {error}=await supabase.auth.resetPasswordForEmail(normalized,{
+    redirectTo:`${window.location.origin}${window.location.pathname}`
+   });
+   if(error)throw error;
+   setAccountMessage('Jeśli konto istnieje, Supabase wyśle link do ustawienia hasła. Otwórz go na Macu, a następnie ustaw hasło w sekcji Supabase.');
+  }catch(e){setAccountMessage(`Nie udało się wysłać linku: ${e instanceof Error?e.message:String(e)}`);}
+  finally{setAuthBusy(false);}
  }
  const meals=useMemo(()=>live(allMeals).sort((a,b)=>b.consumedAt.localeCompare(a.consumedAt)),[allMeals]);
  const daily=useMemo(()=>toDay(meals,day),[meals,day]);
@@ -105,7 +142,27 @@ export default function App(){
    {page==='health'&&<HealthView measurements={measurements} meals={meals} onRefresh={refresh}/>}
    {page==='settings'&&<div className="view-stack"><div className="page-heading"><div className="eyebrow">PRYWATNOŚĆ I SYNCHRONIZACJA</div><h1>Ustawienia</h1><p>Kontroluj, gdzie trafiają Twoje dane.</p></div>
      <div className="settings-grid"><section className="card settings-card"><div className="settings-icon"><Cloud size={22}/></div><h3>Supabase</h3><p className="small-muted">Dziennik działa lokalnie bez konfiguracji. Po zalogowaniu możesz przenosić posiłki między urządzeniami.</p>
-       {!supabase?<div className="config-notice"><Info size={17}/> Brak konfiguracji VITE_SUPABASE_URL i klucza publishable. Instrukcja w README.md.</div>:session?<><div className="account-box"><CheckCircle2 size={19}/> Zalogowano: <strong>{session.user.email}</strong></div><button className="button button-secondary" disabled={syncing} onClick={()=>synchronize(false)}>{syncing?<RefreshCw size={17} className="spin"/>:<RefreshCw size={17}/>} Synchronizuj posiłki</button><button className="text-button" onClick={()=>{void supabase?.auth.signOut();}}><LogOut size={16}/> Wyloguj</button></>:<div className="login-form"><form className="login-form" onSubmit={login}><label>Adres e-mail<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="twoj@email.pl"/></label><button className="button button-primary" type="submit"><LogIn size={17}/> {otpSent?'Wyślij nowy kod':'Wyślij kod e-mail'}</button></form>{otpSent&&<form className="login-form otp-form" onSubmit={verifyCode}><label>6-cyfrowy kod z wiadomości<input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" value={otpCode} onChange={e=>setOtpCode(e.target.value.replace(/\D/g,'').slice(0,6))} required placeholder="123456"/></label><button className="button button-secondary" type="submit" disabled={otpCode.length!==6}><CheckCircle2 size={17}/> Potwierdź kod i zaloguj</button></form>}<p className="hint">Na iPhonie wpisz kod bezpośrednio w PWA z ekranu początkowego. Nie musisz otwierać linku w Safari.</p></div>}
+       {!supabase?<div className="config-notice"><Info size={17}/> Brak konfiguracji VITE_SUPABASE_URL i klucza publishable. Instrukcja w README.md.</div>:session?<>
+        <div className="account-box"><CheckCircle2 size={19}/> Zalogowano: <strong>{session.user.email}</strong></div>
+        <button className="button button-secondary" disabled={syncing} onClick={()=>synchronize(false)}>{syncing?<RefreshCw size={17} className="spin"/>:<RefreshCw size={17}/>} Synchronizuj posiłki</button>
+        <form className="login-form password-form" onSubmit={setAccountPassword}>
+         <strong>Ustaw lub zmień hasło tego konta</strong>
+         <p className="hint">Jeżeli dotychczas logowałeś się linkiem e-mail, tutaj ustawisz hasło bez zmiany identyfikatora konta i bez utraty danych w Supabase.</p>
+         <label>Nowe hasło (minimum 12 znaków)<input type="password" autoComplete="new-password" minLength={12} value={newPassword} onChange={e=>setNewPassword(e.target.value)} required/></label>
+         <label>Powtórz nowe hasło<input type="password" autoComplete="new-password" minLength={12} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} required/></label>
+         <button className="button button-secondary" type="submit" disabled={authBusy||newPassword.length<12||newPassword!==confirmPassword}><ShieldCheck size={17}/> {authBusy?'Zapisywanie...':'Ustaw / zmień hasło'}</button>
+        </form>
+        <button className="text-button" onClick={()=>{void supabase?.auth.signOut();}}><LogOut size={16}/> Wyloguj</button>
+       </>:<div className="login-form">
+        <form className="login-form" onSubmit={login}>
+         <label>Adres e-mail istniejącego konta<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="twoj@email.pl"/></label>
+         <label>Hasło<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>
+         <button className="button button-primary" type="submit" disabled={authBusy}><LogIn size={17}/> {authBusy?'Logowanie...':'Zaloguj e-mailem i hasłem'}</button>
+        </form>
+        <button type="button" className="text-button" onClick={()=>{void requestPasswordReset();}} disabled={authBusy}>Nie mam hasła / zapomniałem hasła</button>
+        <p className="hint">Masz już konto Supabase? Nie zakładaj nowego. Jeśli na Macu jesteś nadal zalogowany, ustaw tam hasło, a następnie zaloguj się nim na iPhonie.</p>
+       </div>}
+
        {session&&<p className="hint">{lastSyncAt?`Ostatnia synchronizacja: ${new Date(lastSyncAt).toLocaleString('pl-PL')}`:'Konto połączone, ale brak informacji o ostatniej synchronizacji.'}</p>}{accountMessage&&<p className="small-muted">{accountMessage}</p>}{syncMessage&&<div className="small-muted">{syncMessage}</div>}
      </section><section className="card settings-card"><div className="settings-icon"><ShieldCheck size={22}/></div><h3>Dane zdrowotne</h3><p className="small-muted">Import ZIP/XML działa lokalnie. Domyślnie nie wysyłamy pomiarów do chmury.</p>
       <label className="toggle-row"><input type="checkbox" checked={healthCloud} onChange={e=>setHealthCloud(e.target.checked)}/><div><strong>Synchronizuj wybrane pomiary do Supabase</strong><p>Wymaga konta. Dzięki temu pojawią się na obu urządzeniach.</p></div></label>

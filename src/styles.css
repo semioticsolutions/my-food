@@ -8,7 +8,6 @@
 .sync-status{border:0;background:transparent;padding:6px 8px;border-radius:8px;white-space:nowrap;cursor:pointer}
 .sync-status:hover{background:#edf4ef}
 .mobile-cloud-status{display:none}
-.otp-form{margin-top:13px;padding-top:13px;border-top:1px solid #e7ebe4}
 .ai-model-field{display:flex;flex-direction:column;gap:8px;font-weight:700;font-size:13px;margin:16px 0 8px}
 .ai-model-field select{padding:12px;border:1px solid #d4dfd7;border-radius:10px;background:#fff;width:100%;max-width:560px}
 @media(max-width:700px){
@@ -19,3 +18,8 @@
 .mobile-cloud-status.on .mobile-cloud-dot{background:#24a266}
 .topbar .sync-status{font-size:11px}
 }
+
+/* v0.2.1 - existing account password management */
+.password-form{border-top:1px solid #e7ebe4;padding-top:14px;margin-top:8px}
+.password-form>strong{font-size:13px;color:#28533e}
+.password-form .hint{margin:0 0 4px}
