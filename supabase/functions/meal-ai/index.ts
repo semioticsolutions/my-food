@@ -66,9 +66,15 @@ export default {
         return Response.json({error:'Niedozwolony format lub zbyt duże zdjęcie.'},{status:400});
       const content:any[]=[{type:'input_text',text:text||'Odczytaj danie lub etykietę ze zdjęcia.'}];
       if(image)content.push({type:'input_image',image_url:image});
+      // The public frontend never supplies an API key. Restrict model selection on the server.
+      const allowedModels=['gpt-6-luna','gpt-6.1-terra'] as const;
+      const requestedModel=String(body.model||'');
+      const fallbackModel=Deno.env.get('OPENAI_MODEL')||'gpt-6-luna';
+      const model=allowedModels.includes(requestedModel as typeof allowedModels[number])?requestedModel:
+        allowedModels.includes(fallbackModel as typeof allowedModels[number])?fallbackModel:'gpt-6-luna';
       const result=await openai('responses',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:Deno.env.get('OPENAI_MODEL')||'gpt-4.1-mini',instructions,
+        body:JSON.stringify({model,reasoning:{effort:'none'},instructions,
           input:[{role:'user',content}],store:false,max_output_tokens:1600,
           text:{format:{type:'json_schema',name:'meal_data',strict:true,schema}}})
       });
