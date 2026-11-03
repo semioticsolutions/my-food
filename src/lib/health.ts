@@ -33,7 +33,7 @@ async function getXml(file:File):Promise<{blob:Blob,close:()=>Promise<void>}> {
  try {
   const entries=await reader.getEntries();
   const entry=entries.find(e=>/\bexport\.xml$/i.test(e.filename) || /\/export\.xml$/i.test(e.filename));
-  if(!entry || !entry.getData) throw new Error('Archiwum nie zawiera export.xml.');
+  if(!entry || entry.directory) throw new Error('Archiwum nie zawiera pliku export.xml.');
   if(entry.uncompressedSize>300_000_000) throw new Error("ZIP zawiera bardzo duży export.xml (>300 MB). Rozpakuj go na Macu i wskaż plik XML bezpośrednio.");
   const blob=await entry.getData(new BlobWriter());
   return {blob,close:()=>reader.close()};
