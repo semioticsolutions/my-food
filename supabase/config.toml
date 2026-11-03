@@ -1,0 +1,3 @@
+project_id = "posilki-pwa"
+[functions.meal-ai]
+verify_jwt = true
