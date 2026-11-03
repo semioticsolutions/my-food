@@ -1,8 +1,15 @@
 import { supabase } from './supabase';
 import type { ParseResult } from '../types';
+export type AiModelId='gpt-6-luna'|'gpt-6.1-terra';
+export const AI_MODELS:{id:AiModelId;label:string;description:string}[]=[
+ {id:'gpt-6-luna',label:'GPT-6 Luna — oszczędny (domyślny)',description:'Najtańszy, szybki model do opisów, etykiet i prostych zdjęć.'},
+ {id:'gpt-6.1-terra',label:'GPT-6.1 Terra — dokładniejsza analiza zdjęć',description:'Mocniejszy model do trudniejszych zdjęć i wieloznacznych opisów, droższy niż Luna.'}
+];
+export function getPreferredAiModel():AiModelId{try{const value=localStorage.getItem('my-food-ai-model');return AI_MODELS.some(m=>m.id===value)?value as AiModelId:'gpt-6-luna';}catch{return 'gpt-6-luna';}}
+export function setPreferredAiModel(model:AiModelId){localStorage.setItem('my-food-ai-model',model);}
 export async function analyzeMeal(text:string,image?:string):Promise<ParseResult>{
  if(!supabase) throw new Error('Najpierw skonfiguruj Supabase, a następnie zaloguj się.');
- const {data,error}=await supabase.functions.invoke('meal-ai',{body:{action:'parse',text,image}});
+ const {data,error}=await supabase.functions.invoke('meal-ai',{body:{action:'parse',text,image,model:getPreferredAiModel()}});
  if(error) throw new Error(`Analiza AI: ${error.message}`);
  if(data?.error) throw new Error(data.error);
  return data as ParseResult;

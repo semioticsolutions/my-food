@@ -3,3 +3,19 @@
 @media(max-width:960px){.main-grid,.health-layout{grid-template-columns:1fr}.sidebar{width:194px}.summary-grid,.health-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-numbers{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.sidebar{display:none}.app-shell{display:block}.topbar{height:64px;padding:0 18px}.breadcrumb{font-size:11px}.top-actions{gap:7px}.sync-status{font-size:10px}.top-actions .add-top{display:none}.content{padding:24px 16px 116px}.page-heading h1{font-size:25px}.page-heading p{font-size:12px}.add-main{padding:10px;min-width:40px;font-size:0}.add-main svg{width:19px;height:19px}.date-bar{padding:9px 12px}.date-label{gap:8px}.date-label strong{font-size:11px}.date-controls{gap:2px}.summary-grid{gap:9px}.summary-card{min-height:123px;padding:16px 12px}.summary-symbol{height:29px;width:29px;font-size:17px;top:10px;right:10px}.summary-card .stat-caption{font-size:10px}.big-stat{font-size:24px;margin-top:11px}.big-stat span{font-size:11px}.summary-foot{font-size:9px}.view-stack{gap:17px}.card{padding:18px;border-radius:13px}.health-mini-card{min-height:120px;padding:15px}.health-mini-card strong{font-size:21px}.mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:10;background:#fff;border-top:1px solid #e4ebe5;padding:9px 4px max(11px,env(safe-area-inset-bottom));justify-content:space-around;box-shadow:0 -6px 24px #1b39250b}.mobile-nav button{display:flex;flex-direction:column;align-items:center;gap:5px;color:#94a49a;background:none;border:0;padding:7px 4px;font-size:9px;font-weight:700;min-width:53px}.mobile-nav button.active{color:#247f61}.mobile-nav .mobile-add{color:#247e62}.modal-backdrop{padding:0;align-items:stretch}.modal{max-height:100dvh;height:100dvh;border-radius:0}.modal-head{padding:20px 18px}.editor-content{padding:15px 17px 0}.editor-smart{padding:13px}.fields-two{grid-template-columns:1fr}.macro-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.component-row{grid-template-columns:minmax(0,1fr) 62px 64px 30px}.component-row input{padding:8px 5px!important;font-size:11px}.toast{right:13px;bottom:91px;left:13px;justify-content:center}.line-wrap{height:260px}}
 @media(max-width:390px){.page-heading h1{font-size:22px}.date-label strong{font-size:10px}.tag{font-size:9px}.summary-card{padding:14px 10px}.summary-foot{font-size:8px}.health-stats{gap:8px}}
+
+/* v0.2 — iOS PWA: visible connection information and OTP login */
+.sync-status{border:0;background:transparent;padding:6px 8px;border-radius:8px;white-space:nowrap;cursor:pointer}
+.sync-status:hover{background:#edf4ef}
+.mobile-cloud-status{display:none}
+.otp-form{margin-top:13px;padding-top:13px;border-top:1px solid #e7ebe4}
+.ai-model-field{display:flex;flex-direction:column;gap:8px;font-weight:700;font-size:13px;margin:16px 0 8px}
+.ai-model-field select{padding:12px;border:1px solid #d4dfd7;border-radius:10px;background:#fff;width:100%;max-width:560px}
+@media(max-width:700px){
+.mobile-cloud-status{display:flex;width:100%;align-items:center;flex-wrap:wrap;gap:8px;border:1px solid #dde5de;background:#f5f8f4;padding:10px 12px;border-radius:10px;margin-bottom:16px;color:#53675a;font-size:12px;font-weight:650;text-align:left}
+.mobile-cloud-status.on{background:#ecf7ef;border-color:#bfdcc9;color:#266747}
+.mobile-cloud-status small{display:block;flex-basis:100%;padding-left:16px;color:#668272;font-size:10px}
+.mobile-cloud-dot{width:8px;height:8px;border-radius:50%;background:#b2bcb0;display:block;flex-shrink:0}
+.mobile-cloud-status.on .mobile-cloud-dot{background:#24a266}
+.topbar .sync-status{font-size:11px}
+}
